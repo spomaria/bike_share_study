@@ -1,0 +1,190 @@
+---
+title: "Cyclists Behavioural Patterns"
+output: html_document
+author: "Nengak Emmanuel Goltong"
+date: "2023-09-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+## Introduction
+The director of marketing at a bike-share company believes that the company's future success depends on maximizing the number of annual memberships. The aim of this project therefore, is to understand how behaviours differ in the two cyclist membership types.
+
+## Reading in the Data
+
+The Bike Share data was downloaded using this [link](https://divvy-tripdata.s3.amazonaws.com/index.html) and was further cleaned before being used for this exercise. The data cleaning is carefully documented in the accompanying file named 'Bike-Share-Case-Study--Data-Cleaning.Rmd'.
+
+```{r loading_packages}
+library(tidyverse)  #helps wrangle data
+library(lubridate)  #helps wrangle date attributes
+library(ggplot2)  #helps visualize data
+library(skimr)
+getwd()
+```
+
+```{r reading_data, results='hide'}
+# Upload Divvy datasets (csv file) here
+bike_share_data <- read_csv("~/Documents/Spomary-Files/COURSERA/Google-Data-Analytics-Course/Course-8-Capstone/Bike-Share-Case-Study/divvy_tripdata_cleaned.csv")
+```
+
+
+```{r data_summary, eval=FALSE}
+#======================================================
+# STEP 3: DATA SUMMARY
+#======================================================
+# Inspect the new table that has been created
+skim_without_charts(bike_share_data)
+```
+
+```{r usertype_table}
+# Begin by seeing how many observations fall under each usertype
+table(bike_share_data$member_casual)
+```
+This shows that the bike-share company has more annual members than casual members.
+
+## STEP 4: CONDUCT DESCRIPTIVE ANALYSIS
+
+```{r eval=FALSE}
+# Descriptive analysis on ride_length (all figures in seconds)
+summary(bike_share_data$ride_length)
+```
+
+```{r average_per_week_day_ordered, eval=FALSE}
+# Notice that the days of the week are out of order. Let's fix that.
+bike_share_data$day_of_week <- ordered(bike_share_data$day_of_week, levels=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+
+# Now, let's run the average ride time by each day for members vs casual users
+bike_share_data%>%
+  aggregate(ride_length ~ member_casual + day_of_week, FUN = mean)
+```
+
+```{r ridership_type_weekday, eval=FALSE}
+# analyze ridership data by type and weekday
+bike_share_data %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>%  #creates weekday field using wday()
+  group_by(member_casual, weekday) %>%  #groups by usertype and weekday
+  summarise(number_of_rides = n()							#calculates the number of rides and average duration 
+  ,average_duration = mean(ride_length)) %>% 		# calculates the average duration
+  arrange(member_casual, weekday)								# sorts
+```
+
+```{r rides_per_ridertype}
+# Let's visualize the number of rides by rider type
+bike_share_data %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, weekday) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length)) %>% 
+            arrange(member_casual, weekday)  %>% 
+  ggplot(aes(x = weekday, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge")+
+  labs(title = "Average Number of Rides by Day of the Week",
+       y = "Number of Rides",
+       x = "Day of the Week", caption = "Author: N_E_Goltong (Google Data Analytics Capstone Project), Sept, 2023")+
+  guides(fill = guide_legend(title = "Membership Type"))
+```
+
+
+Annual Members have higher average number of trips than casual members. The highest average number of trips is recorded on Wednesday.
+
+```{r average_duration}
+# Let's create a visualization for average duration
+bike_share_data %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, weekday) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length)) %>% 
+  arrange(member_casual, weekday)  %>% 
+  ggplot(aes(x = weekday, y = average_duration, fill = member_casual)) +
+  geom_col(position = "dodge")+
+  labs(title = "Average Trip Duration by Day of the Week",
+       y = "Time (seconds)",
+       x = "Day of the Week", caption = "Author: N_E_Goltong (Google Data Analytics Capstone Project), Sept, 2023")+
+  guides(fill = guide_legend(title = "Membership Type"))
+```
+
+
+Casual Members have higher average duration per trip than annual members. The highest duration per trip is recorded on Saturday.
+
+```{r rider_duration_by_bike}
+# Let's create a visualization for average duration
+bike_share_data %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, rideable_type) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length)) %>% 
+  arrange(member_casual, rideable_type)  %>% 
+  ggplot(aes(x = rideable_type, y = average_duration, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  labs(title = "Average Trip Duration by Bike Type",
+       y = "Time (seconds)",
+       x = "Bike Type", caption = "Author: N_E_Goltong (Google Data Analytics Capstone Project), Sept, 2023")+
+  guides(fill = guide_legend(title = "Membership Type"))
+```
+
+
+The above bar graph shows that casual members have the highest trip duration on average. In fact, those who rode on docked bike had the longest trip duration and happens that only casual members used docked bike in the period under study.
+
+```{r rides_ridertype_by_biketype}
+# Let's create a visualization for average duration
+bike_share_data %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, rideable_type) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length)) %>% 
+  arrange(member_casual, rideable_type)  %>% 
+  ggplot(aes(x = rideable_type, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge")+
+  labs(title = "Average Number of Rides by Bike Type",
+       y = "Number of Rides",
+       x = "Bike Type", caption = "Author: N_E_Goltong (Google Data Analytics Capstone Project), Sept, 2023")+
+  guides(fill = guide_legend(title = "Membership Type"))
+```
+
+
+The above bar graph shows that annual members have the highest number of trips on average. In fact, those who rode on docked bike had the longest trip duration and happens that only casual members used docked bike in the period under study.
+
+```{r rides_by_weekday_by_biketype}
+# Let's create a visualization for average duration
+bike_share_data %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(weekday, rideable_type) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length)) %>% 
+  arrange(weekday, rideable_type)  %>% 
+  ggplot(aes(x = weekday, y = number_of_rides, fill = rideable_type)) +
+  geom_col(position = "dodge")+
+  labs(title = "Average Number of Rides by Day of the Week",
+       y = "Number of Rides",
+       x = "Day of the Week", caption = "Author: N_E_Goltong (Google Data Analytics Capstone Project), Sept, 2023")+
+  guides(fill = guide_legend(title = "Bike Type")) + coord_flip()
+```
+
+```{r duration_by_weekday_by_biketype}
+# Let's create a visualization for average duration
+bike_share_data %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(weekday, rideable_type) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length)) %>% 
+  arrange(weekday, rideable_type)  %>% 
+  ggplot(aes(x = weekday, y = average_duration, fill = rideable_type)) +
+  geom_col(position = "dodge")+
+  labs(title = "Average Trip Duration by Day of the Week",
+       y = "Time (seconds)",
+       x = "Day of the Week", caption = "Author: N_E_Goltong (Google Data Analytics Capstone Project), Sept, 2023")+
+  guides(fill = guide_legend(title = "Bike Type"))  + coord_flip()
+```
+
+
+## Recomendation
+In order to increase the number of annual memberships, management should consider the following actions:
+
+1. Incorporate some discounts or some other benefits for trips with duration longer than 1,000 seconds for Annual Members.
+
+2. Discounts should be introduced for Annual members who use docked bike type. Note that this bike type is only used by Casual members in the reporting period.
+
+3. Discounts or incentives should be introduced for weekend trips by Annual members.
+
